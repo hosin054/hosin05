@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة شطة بطة</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #fdf4c1;
+        }
+        .board {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            background-color: white;
+            border: 2px solid black;
+        }
+        .dot {
+            width: 20px;
+            height: 20px;
+            background-color: black;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+        .dot-1 { top: 0; left: 0; }
+        .dot-2 { top: 0; left: 47%; }
+        .dot-3 { top: 0; right: 0; }
+        .dot-4 { top: 47%; left: 0; }
+        .dot-5 { top: 47%; left: 47%; }
+        .dot-6 { top: 47%; right: 0; }
+        .dot-7 { bottom: 0; left: 0; }
+        .dot-8 { bottom: 0; left: 47%; }
+        .dot-9 { bottom: 0; right: 0; }
+        .line {
+            position: absolute;
+            background-color: black;
+        }
+        .line.horizontal-1 { top: 50%; left: 0; width: 100%; height: 2px; transform: translateY(-50%); }
+        .line.horizontal-2 { top: 0; left: 50%; height: 100%; width: 2px; transform: translateX(-50%); }
+        .line.diagonal-1 { top: 0; left: 0; width: 141.5%; height: 2px; transform: rotate(45deg); transform-origin: 0 0; }
+        .line.diagonal-2 { top: 0; right: 0; width: 141.5%; height: 2px; transform: rotate(-45deg); transform-origin: 100% 0; }
+        .blue-square, .red-square {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+        }
+        .blue-square { background-color: #80DEEA; }
+        .red-square { background-color: #EF5350; }
+        .error, .winner-message {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .winner-message {
+            color: green;
+            font-size: 1.5em;
+        }
+        .new-game-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="board">
+        <div class="dot dot-1" data-position="1"></div>
+        <div class="dot dot-2" data-position="2"></div>
+        <div class="dot dot-3" data-position="3"></div>
+        <div class="dot dot-4" data-position="4"></div>
+        <div class="dot dot-5" data-position="5"></div>
+        <div class="dot dot-6" data-position="6"></div>
+        <div class="dot dot-7" data-position="7"></div>
+        <div class="dot dot-8" data-position="8"></div>
+        <div class="dot dot-9" data-position="9"></div>
+        <div class="line horizontal-1"></div>
+        <div class="line horizontal-2"></div>
+        <div class="line diagonal-1"></div>
+        <div class="line diagonal-2"></div>
+    </div>
+    <div class="error" id="error"></div>
+    <div class="winner-message" id="winner-message"></div>
+    <button class="new-game-button" id="new-game-button" style="display: none;">لعبة جديدة</button>
+    <script>
+        let currentPlayer = 'blue';
+        const board = document.querySelector('.board');
+        const dots = document.querySelectorAll('.dot');
+        const errorMessage = document.getElementById('error');
+        const winnerMessage = document.getElementById('winner-message');
+        const newGameButton = document.getElementById('new-game-button');
+        let blueCount = 0;
+        let redCount = 0;
+        let squares = [];
+        let selectedSquare = null;
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                if (!dot.classList.contains('occupied')) {
+                    if ((currentPlayer === 'blue' && blueCount < 3) || (currentPlayer === 'red' && redCount < 3)) {
+                        const square = document.createElement('div');
+                        square.classList.add(currentPlayer + '-square');
+                        moveSquareToDot(square, dot);
+                        board.appendChild(square);
+                        dot.classList.add('occupied');
+                        squares.push(square);
+
+                        if (currentPlayer === 'blue') {
+                            blueCount++;
+                        } else {
+                            redCount++;
+                        }
+
+                        currentPlayer = currentPlayer === 'blue' ? 'red' : 'blue';
+
+                        if (blueCount === 3 && redCount === 3) {
+                            disableDots();
+                            enableSquares();
+                        }
+                    }
+                }
+            });
+        });
+
+        function disableDots() {
+            dots.forEach(dot => {
+                dot.style.pointerEvents = 'none';
+            });
+        }
+
+        function enableDots() {
+            dots.forEach(dot => {
+                dot.style.pointerEvents = 'auto';
+            });
+        }
+
+        function enableSquares() {
+            squares.forEach(square => {
+                square.addEventListener('click', (event) => {
+                    resetSquareColors();
+                    if (square.classList.contains('blue-square') && currentPlayer === 'blue') {
+                        square.style.backgroundColor = '#80FFFF';
+                        selectedSquare = square;
+                        enableDots();
+                        errorMessage.textContent = '';
+                    } else if (square.classList.contains('red-square') && currentPlayer === 'red') {
+                        square.style.backgroundColor = '#ff9999';
+                        selectedSquare = square;
+                        enableDots();
+                        errorMessage.textContent = '';
+                    } else {
+                        errorMessage.textContent = `إنه دور اللاعب ${currentPlayer === 'blue' ? 'الأزرق' : 'الأحمر'}`;
+                    }
+                    event.stopPropagation();
+                });
+            });
+
+            document.addEventListener('click', resetSquareColors);
+        }
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                if (selectedSquare) {
+                    const dotPosition = parseInt(dot.dataset.position);
+                    const currentSquarePosition = getSquarePosition(selectedSquare);
+                    if (isMoveValid(currentSquarePosition, dotPosition)) {
+                        moveSquareToDot(selectedSquare, dot);
+                        selectedSquare = null;
+                        disableDots();
+                        errorMessage.textContent = '';
+                        if (checkWin()) {
+                            winnerMessage.textContent = `فاز اللاعب ${currentPlayer === 'blue' ? 'الأزرق' : 'الأحمر'}`;
+                            endGame();
+                        } else {
+                            currentPlayer = currentPlayer === 'blue' ? 'red' : 'blue';
+                        }
+                    } else {
+                        errorMessage.textContent = 'هذه نقلة غير ممكنة';
+                    }
+                }
+            });
+        });
+
+        function moveSquareToDot(square, dot) {
+            square.style.transform = `translate(${dot.offsetLeft}px, ${dot.offsetTop}px)`;
+            dot.classList.add('occupied');
+        }
+
+        function resetSquareColors() {
+            squares.forEach(square => {
+                if (square.classList.contains('blue-square')) {
+                    square.style.backgroundColor = '#80DEEA';
+                } else if (square.classList.contains('red-square')) {
+                    square.style.backgroundColor = '#EF5350';
+                }
+            });
+            selectedSquare = null;
+        }
+
+        function getSquarePosition(square) {
+            const transform = square.style.transform;
+            const regex = /translate\((.*?)px, (.*?)px\)/;
+            const match = transform.match(regex);
+            const left = parseFloat(match[1]);
+            const top = parseFloat(match[2]);
+
+            let position = null;
+            dots.forEach(dot => {
+                const dotLeft = dot.offsetLeft;
+                const dotTop = dot.offsetTop;
+                if (Math.abs(dotLeft - left) < 5 && Math.abs(dotTop - top) < 5) {
+                    position = parseInt(dot.dataset.position);
+                }
+            });
+            return position;
+        }
+
+        function isMoveValid(current, target) {
+            const validMoves = {
+                1: [2, 4, 5],
+                 2: [1, 3, 5],
+                 3: [2, 5, 6],
+                 4: [1, 5, 7],
+                 5: [1, 2, 3, 4, 6, 7, 8, 9],
+                 6: [3, 5, 9],
+                 7: [4, 5, 8],
+                 8: [5, 7, 9],
+                 9: [5, 6, 8]
+            };
+            return validMoves[current].includes(target);
+        }
+
+        function checkWin() {
+            const winPatterns = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [1, 4, 7],
+                [2, 5, 8],
+                [3, 6, 9],
+                [1, 5, 9],
+                [3, 5, 7]
+            ];
+            const currentSquares = squares.filter(square => square.classList.contains(currentPlayer + '-square'));
+            const positions = currentSquares.map(square => getSquarePosition(square));
+
+            return winPatterns.some(pattern => 
+                pattern.includes(5) && pattern.every(position => positions.includes(position))
+            );
+        }
+
+        function endGame() {
+            disableDots();
+            squares.forEach(square => {
+                square.style.pointerEvents = 'none';
+            });
+            newGameButton.style.display = 'block';
+        }
+
+        newGameButton.addEventListener('click', () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>
